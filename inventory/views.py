@@ -20,41 +20,45 @@ def load_inventory(request):
     length = int(request.POST['length'])
     total = Item.objects.all().count()
     model_obj = None
-    # if request.POST['search[value]']:
-    #     model_obj = Item.objects.annotate(
-    #         unit_price = Case(
-    #             When(Q(item_price__exact=0) | Q(unit_per_item__exact=0), then=0.0),
-    #             default=F("item_price") / F("unit_per_item")
-    #         )
-    #     ).filter(
-    #         Q(item_name__icontains=request.POST['search[value]'])|
-    #         Q(item_price__icontains=request.POST['search[value]'])|
-    #         Q(unit_per_item__icontains=request.POST['search[value]'])|
-    #         Q(description__icontains=request.POST['search[value]'])|
-    #         Q(unit_price__icontains=request.POST['search[value]'])
-    #     )[start:length]
-    # else:
-    #     model_obj = Item.objects.all()[start:length]
     if request.POST['search[value]']:
-        model_obj = Item.objects.filter(
+        model_obj = Item.objects.all().annotate(
+            unit_prices = Case(
+                When(Q(item_price__exact=0) | Q(unit_per_item__exact=0), then=0.0),
+                default=F("item_price") / F("unit_per_item")
+            )
+        ).filter(
             Q(item_name__icontains=request.POST['search[value]'])|
             Q(item_price__icontains=request.POST['search[value]'])|
             Q(unit_per_item__icontains=request.POST['search[value]'])|
-            Q(description__icontains=request.POST['search[value]'])
-            # Q(unit_price__icontains=request.POST['search[value]'])
+            Q(description__icontains=request.POST['search[value]'])|
+            Q(unit_prices__icontains=request.POST['search[value]'])
         )[start:length]
     else:
-        model_obj = Item.objects.all()[start:length]
-
+        model_obj = Item.objects.all().annotate(
+            unit_prices = Case(
+                When(Q(item_price__exact=0) | Q(unit_per_item__exact=0), then=0.0),
+                default=F("item_price") / F("unit_per_item")
+            )
+        )[start:length]
+    # if request.POST['search[value]']:
+    #     model_obj = Item.objects.filter(
+    #         Q(item_name__icontains=request.POST['search[value]'])|
+    #         Q(item_price__icontains=request.POST['search[value]'])|
+    #         Q(unit_per_item__icontains=request.POST['search[value]'])|
+    #         Q(description__icontains=request.POST['search[value]'])
+    #         # Q(unit_price__icontains=request.POST['search[value]'])
+    #     )[start:length]
+    # else:
+    #     model_obj = Item.objects.all()[start:length]
+    
     for qobj in model_obj:
-        # unit_price = qobj.item_price
         total_records += 1
         item = [
             qobj.id,
             qobj.item_name,
             qobj.item_price,
             qobj.unit_per_item,
-            qobj.unit_price(),
+            qobj.unit_prices,
             qobj.description,
             qobj.is_active,
             qobj.is_deleted,
